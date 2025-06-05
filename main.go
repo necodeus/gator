@@ -252,6 +252,31 @@ func handlerAddFeed(s *state, cmd command) error {
 	return nil
 }
 
+func handlerFeeds(s *state, cmd command) error {
+	fmt.Println("Listing feeds...")
+
+	ctx := context.Background()
+	feeds, err := s.db.GetFeeds(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get feeds: %v", err)
+	}
+	for _, feed := range feeds {
+		// get user by ID
+		user, err := s.db.GetUserById(ctx, feed.UserID)
+		if err != nil {
+			if err != sql.ErrNoRows {
+				return fmt.Errorf("failed to get user: %v", err)
+			}
+			fmt.Printf("- Name: %s Url: %s User: Unknown\n", feed.Name, feed.Url)
+			continue
+		}
+
+		fmt.Printf("- Name: %s Url: %s User: %s\n", feed.Name, feed.Url, user.Name)
+	}
+
+	return nil
+}
+
 func (c *commands) run(s *state, cmd command) error {
 	switch cmd.Name {
 	case "login":
@@ -266,6 +291,8 @@ func (c *commands) run(s *state, cmd command) error {
 		return handlerAgg(s, cmd)
 	case "addfeed":
 		return handlerAddFeed(s, cmd)
+	case "feeds":
+		return handlerFeeds(s, cmd)
 	default:
 		return fmt.Errorf("unknown command: %s", cmd.Name)
 	}
@@ -281,7 +308,7 @@ func main() {
 	}
 	cfg = config
 
-	fmt.Printf("Config loaded: %+v\n", config)
+	// fmt.Printf("Config loaded: %+v\n", config)
 
 	// Initialize database connection
 
